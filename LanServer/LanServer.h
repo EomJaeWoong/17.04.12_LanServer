@@ -1,6 +1,9 @@
 #ifndef __LANSERVER__H__
 #define __LANSERVER__H__
 
+//-------------------------------------------------------------------------------------
+// 技记 沥焊 备炼眉
+//-------------------------------------------------------------------------------------
 typedef struct stSESSION_INFO
 {
 	SOCKET _socket;
@@ -9,6 +12,9 @@ typedef struct stSESSION_INFO
 
 } SESSION_INFO;
 
+//-------------------------------------------------------------------------------------
+// 技记
+//-------------------------------------------------------------------------------------
 typedef struct stSESSION
 {
 	bool _bUsed;
@@ -25,6 +31,8 @@ typedef struct stSESSION
 	BOOL _bSendFlag;
 	LONG _lIOCount;
 } SESSION;
+
+
 
 class CLanServer
 {
@@ -88,6 +96,13 @@ private :
 	BOOL SendPost(SESSION *pSession);
 
 	bool PacketProc(SESSION *pSession, CNPacket *pPacket);
+
+	void DisconnectSession(SOCKET socket);
+	void DisconnectSession(SESSION *pSession);
+	void DisconnectSession(__int64 iSessionID);
+
+	void ReleaseSession(SESSION *pSession);
+	void ReleaseSession(__int64 iSessionID);
 
 public:
 	//---------------------------------------------------------------------------------

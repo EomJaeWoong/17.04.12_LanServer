@@ -23,7 +23,25 @@ CNPacket::CNPacket(int iBufferSize)
 
 CNPacket::CNPacket(const CNPacket &clSrcPacket)
 {
+	/*
+	m_iBufferSize = clSrcPacket.m_iBufferSize;
+	Initial(m_iBufferSize);
 	
+	for (int iCnt = clSrcPacket.m_chpReadPos - clSrcPacket.m_chpBuffer;
+		iCnt < clSrcPacket.m_chpWritePos - clSrcPacket.m_chpBuffer;
+		iCnt++)
+	{
+		m_chpBuffer[iCnt] = clSrcPacket.m_chpBuffer[iCnt];
+	}
+
+	m_chpDataFieldStart = clSrcPacket.m_chpDataFieldStart;
+	m_chpDataFieldEnd = clSrcPacket.m_chpDataFieldEnd;
+
+	m_chpReadPos = clSrcPacket.m_chpReadPos;
+	m_chpWritePos = clSrcPacket.m_chpWritePos;
+
+	m_iDataSize = clSrcPacket.m_iDataSize;
+	*/
 }
 
 CNPacket::~CNPacket()

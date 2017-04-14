@@ -218,6 +218,9 @@ void CAyaStreamSQ::ClearBuffer(void)
 	{
 		m_chpBuffer[iCnt] = 0;
 	}
+
+	m_iWritePos = 0;
+	m_iReadPos = 0;
 }
 
 /////////////////////////////////////////////////////////////////////////
