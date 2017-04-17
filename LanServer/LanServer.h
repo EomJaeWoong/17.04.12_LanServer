@@ -95,8 +95,6 @@ private :
 	void RecvPost(SESSION *pSession);
 	BOOL SendPost(SESSION *pSession);
 
-	bool PacketProc(SESSION *pSession, CNPacket *pPacket);
-
 	void DisconnectSession(SOCKET socket);
 	void DisconnectSession(SESSION *pSession);
 	void DisconnectSession(__int64 iSessionID);
@@ -109,12 +107,16 @@ public:
 	// 모니터링 변수들
 	//---------------------------------------------------------------------------------
 	int _AcceptCounter;
+	int _AcceptTotalCounter;
 	int _RecvPacketCounter;
 	int _SendPacketCounter;
 
 	int _AcceptTPS;
+	int _AcceptTotalTPS;
 	int _RecvPacketTPS;
 	int _SendPacketTPS;
+
+	int _iSessionCount;
 
 protected:
 	////////////////////////////////////////////////////////////////////////
@@ -138,8 +140,6 @@ protected:
 
 	int _iWorkerThdNum;
 	__int64 _iSessionID;
-
-	int _iSessionCount;
 
 	bool _bShutdown;
 };

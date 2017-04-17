@@ -171,7 +171,29 @@ int	CAyaStreamSQ::Peek(char *chpDest, int iSize)
 	return iSize;
 }
 
+/////////////////////////////////////////////////////////////////////////
+// ReadPos 에서 데이타 읽어옴. ReadPos 고정.
+//
+// Parameters: (char *)데이타 포인터. (int)크기.
+// Return: (int)가져온 크기.
+/////////////////////////////////////////////////////////////////////////
+int	CAyaStreamSQ::Peek(char *chpDest, int iIndex, int iSize)
+{
+	char *chpIndex = &m_chpBuffer[m_iReadPos] + iIndex;
 
+	if (GetUseSize() < iSize)
+		iSize = GetUseSize();
+
+	if (GetNotBrokenGetSize() < iSize && m_iWritePos < m_iReadPos)
+		iSize = GetNotBrokenGetSize() + m_iWritePos - 1;
+
+	for (int iCnt = 0; iCnt < iSize; iCnt++)
+	{
+		chpDest[iCnt] = chpIndex[iCnt];
+	}
+
+	return iSize;
+}
 
 
 

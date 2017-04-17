@@ -29,7 +29,25 @@ bool CLanServerTest::OnConnectionRequest(WCHAR *ClientIP, int Port)		// accept �
 
 void CLanServerTest::OnRecv(__int64 ClientID, CNPacket *pPacket)			// 패킷 수신 완료 후
 {
-	SendPacket(ClientID, pPacket);
+	CNPacket *pSendPacket = new CNPacket;
+
+	while (pPacket->GetPacketSize() > 0)
+	{
+		short header;
+		__int64 iValue;
+
+		// Packet Process
+		*pPacket >> header;
+		*pPacket >> iValue;
+
+		*pSendPacket << header;
+		*pSendPacket << iValue;
+		//////////////////////
+		InterlockedIncrement64((LONG64 *)&_RecvPacketCounter);
+	}
+	
+	SendPacket(ClientID, pSendPacket);
+	delete pSendPacket;
 }
 
 void CLanServerTest::OnSend(__int64 ClientID, int sendsize)				// 패킷 송신 완료 후

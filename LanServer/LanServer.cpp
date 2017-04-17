@@ -4,6 +4,7 @@
 #include <process.h>
 #include <stdio.h>
 
+#pragma comment (lib, "Winmm.lib")
 #pragma comment (lib, "Ws2_32.lib")
 
 #include "StreamQueue.h"
@@ -130,13 +131,12 @@ bool CLanServer::SendPacket(__int64 iSessionID, CNPacket *pPacket)
 	{
 		if (Session[iCnt]._iSessionID == iSessionID)
 		{
-			Session[iCnt].SendQ.Put((char *)pPacket->GetHeaderBufferPtr(), pPacket->GetPacketSize());
+			Session[iCnt].SendQ.Put((char *)&pPacket, sizeof(pPacket));
 			break;
 		}
 	}
 
 	SendPost(&Session[iCnt]);
-	InterlockedIncrement64((LONG64 *)&_SendPacketCounter);
 
 	return true;
 }
@@ -179,46 +179,23 @@ BOOL CLanServer::SendPost(SESSION *pSession)
 {
 	int retval, iCount = 0;
 	DWORD dwSendSize, dwflag = 0;
-	WSABUF wBuf;
-
-	wBuf.buf = pSession->SendQ.GetReadBufferPtr();
-	wBuf.len = pSession->SendQ.GetUseSize();
-
-	if (pSession->_bSendFlag == TRUE)	return FALSE;
-
-	else{
-		InterlockedIncrement64((LONG64 *)&pSession->_lIOCount);
-		pSession->_bSendFlag = TRUE;
-		retval = WSASend(pSession->_SessionInfo._socket, &wBuf, 1, &dwSendSize, dwflag, &pSession->_SendOverlapped, NULL);
-		if (retval == SOCKET_ERROR)
-		{
-			int iErrorCode = GetLastError();
-			if (iErrorCode != WSA_IO_PENDING)
-			{
-				OnError(iErrorCode, L"SendPost Error\n");
-				if (0 == InterlockedDecrement64((LONG64 *)&pSession->_lIOCount))
-					ReleaseSession(pSession);
-
-				return FALSE;
-			}
-		}
-	}
-	
-	return TRUE;
-	/*
-	int retval, iCount;
-	DWORD dwSendSize, dwflag = 0;
 	WSABUF wBuf[MAX_WSABUF];
 
-	for (iCount = 0; iCount < MAX_WSABUF; iCount++)
+	while (pSession->SendQ.GetUseSize() / sizeof(char *) > iCount)
 	{
-		if (pSession->SendQ.GetUseSize() > 0)
-		{
-			wBuf[iCount].buf = pSession->SendQ.GetReadBufferPtr() + (iCount * 8);
-			wBuf[iCount].len = 8;
-		}
-	}
+		if (iCount >= MAX_WSABUF)
+			return false;
+
+		CNPacket *pPacket = NULL;
+		pSession->SendQ.Peek((char *)&pPacket, iCount * sizeof(char *), sizeof(char *));
+
+		wBuf[iCount].buf = (char *)pPacket->GetBufferPtr();
+		wBuf[iCount].len = pPacket->GetPacketSize();
 	
+		InterlockedIncrement64((LONG64 *)&_SendPacketCounter);
+		iCount++;
+	}
+
 	if (pSession->_bSendFlag == TRUE)	return FALSE;
 
 	else{
@@ -237,43 +214,6 @@ BOOL CLanServer::SendPost(SESSION *pSession)
 				return FALSE;
 			}
 		}
-	}
-
-	return TRUE;
-	*/
-}
-
-bool CLanServer::PacketProc(SESSION *pSession, CNPacket *pPacket)
-{
-	while (pSession->RecvQ.GetUseSize() > 0)
-	{
-		short header;
-
-		//////////////////////////////////////////////////////////////////////////////////////////
-		// RecvQ 용량이 header보다 작은지 검사
-		//////////////////////////////////////////////////////////////////////////////////////////
-		if (pSession->RecvQ.GetUseSize() < sizeof(header))
-			return FALSE;
-
-		pSession->RecvQ.Peek((char *)&header, sizeof(header));
-
-		//////////////////////////////////////////////////////////////////////////////////////////
-		//header + payload 용량이 RecvQ용량보다 큰지 검사
-		//////////////////////////////////////////////////////////////////////////////////////////
-		if (pSession->RecvQ.GetUseSize() < header + sizeof(header))
-			return FALSE;
-
-		*pPacket << header;
-		pSession->RecvQ.RemoveData(sizeof(header));
-
-		//////////////////////////////////////////////////////////////////////////////////////////
-		//payload를 cPacket에 뽑고 같은지 검사
-		//////////////////////////////////////////////////////////////////////////////////////////
-		if (header != pPacket->Put(pSession->RecvQ.GetReadBufferPtr(), header))
-			return FALSE;
-
-		pSession->RecvQ.RemoveData(header);		
-		InterlockedIncrement64((LONG64 *)&_RecvPacketCounter);
 	}
 
 	return TRUE;
@@ -346,10 +286,11 @@ int CLanServer::WorkerThread_Update()
 		{
 			pPacket = new CNPacket();
 			pSession->RecvQ.MoveWritePos(dwTransferred);
-			
-			PacketProc(pSession, pPacket);
+			pPacket->Put(pSession->RecvQ.GetReadBufferPtr(), pSession->RecvQ.GetUseSize());
+			pSession->RecvQ.RemoveData(dwTransferred);
+
 			OnRecv(pSession->_iSessionID, pPacket);
-		
+			
 			delete pPacket;
 
 			RecvPost(pSession);
@@ -360,7 +301,9 @@ int CLanServer::WorkerThread_Update()
 		//////////////////////////////////////////////////////////////////////////////
 		else if (pOverlapped == &pSession->_SendOverlapped)
 		{
-			pSession->SendQ.RemoveData(dwTransferred);
+			CNPacket *pPacket = NULL;
+
+			pSession->SendQ.RemoveData(8);
 			pSession->_bSendFlag = FALSE;
 
 			OnSend(pSession->_iSessionID, dwTransferred);
@@ -405,7 +348,7 @@ int CLanServer::AcceptThread_Update()
 			continue;
 		}	
 		InterlockedIncrement64((LONG64 *)&_AcceptCounter);
-
+		InterlockedIncrement64((LONG64 *)&_AcceptTotalCounter);
 		//////////////////////////////////////////////////////////////////////////////
 		// 세션 추가 과정
 		//////////////////////////////////////////////////////////////////////////////
@@ -471,26 +414,24 @@ int CLanServer::AcceptThread_Update()
 
 int CLanServer::MonitorThread_Update()
 {
+	DWORD iGetTime = timeGetTime();
+
 	while (1)
 	{
+		if (timeGetTime() - iGetTime < 1000)
+			continue;
+
 		_AcceptTPS = _AcceptCounter;
+		_AcceptTotalTPS += _AcceptTotalCounter;
 		_RecvPacketTPS = _RecvPacketCounter;
 		_SendPacketTPS = _SendPacketCounter;
 
 		_AcceptCounter = 0;
+		_AcceptTotalCounter = 0;
 		_RecvPacketCounter = 0;
 		_SendPacketCounter = 0;
 
-		wprintf(L"------------------------------------------------\n");
-		wprintf(L"Connect Session : %d\n", _iSessionCount);
-		wprintf(L"Accept TPS : %d\n", _AcceptTPS);
-		wprintf(L"RecvPacket TPS : %d\n", _RecvPacketTPS);
-		wprintf(L"SendPacket TPS : %d\n", _SendPacketTPS);
-		wprintf(L"PacketPool Use : %d\n", 0);
-		wprintf(L"PacketPool Alloc : %d\n", 0);
-		wprintf(L"------------------------------------------------\n\n");
-
-		Sleep(999);
+		iGetTime = timeGetTime();
 	}
 }
 
