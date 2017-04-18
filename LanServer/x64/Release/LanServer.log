@@ -1,9 +1,8 @@
-﻿빌드 시작: 2017-04-17 오후 3:29:22
+﻿빌드 시작: 2017-04-18 오후 2:39:27
      1>2 노드의 "C:\Users\USER\Documents\Visual Studio 2013\Projects\17.04.12_LanServer\LanServer\LanServer.vcxproj" 프로젝트(Build 대상)입니다.
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /Zi /nologo /W3 /WX- /sdl /Od /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt LanServerTest.cpp
-         LanServerTest.cpp
-     1>c:\users\user\documents\visual studio 2013\projects\17.04.12_lanserver\lanserver\NPacket.h(171): warning C4244: 'return' : '__int64'에서 'const int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\CL.exe /c /Zi /nologo /W3 /WX- /sdl /Od /Oi /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"x64\Release\\" /Fd"x64\Release\vc120.pdb" /Gd /TP /errorReport:prompt StreamQueue.cpp
+         StreamQueue.cpp
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\USER\Documents\Visual Studio 2013\Projects\17.04.12_LanServer\x64\Release\LanServer.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\USER\Documents\Visual Studio 2013\Projects\17.04.12_LanServer\x64\Release\LanServer.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\USER\Documents\Visual Studio 2013\Projects\17.04.12_LanServer\x64\Release\LanServer.lib" /MACHINE:X64 x64\Release\LanServer.obj
          x64\Release\LanServerTest.obj
@@ -17,4 +16,4 @@
 
 빌드했습니다.
 
-경과 시간: 00:00:01.90
+경과 시간: 00:00:01.47

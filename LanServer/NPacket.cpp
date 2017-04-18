@@ -92,8 +92,6 @@ void	CNPacket::Release(void)
 //////////////////////////////////////////////////////////////////////////
 void	CNPacket::Clear(void)
 {
-	memset(m_chpBuffer, NULL, m_iBufferSize);
-
 	m_chpReadPos = m_chpBuffer;
 	m_chpWritePos = m_chpBuffer;
 
@@ -346,4 +344,30 @@ int		CNPacket::PutData(unsigned char *bypSrc, int iSrcSize)
 	}
 
 	return iCnt;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// 패킷 메모리 할당.
+//
+// Parameters: 없음.
+// Return: (CNPacket *)패킷 포인터.
+//////////////////////////////////////////////////////////////////////////
+CNPacket *CNPacket::Alloc()
+{
+	CNPacket *pPacket = new CNPacket();
+	pPacket->addRef();
+	return pPacket;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// 패킷 메모리 해제.
+//
+// Parameters: (CNPacket *)패킷 포인터.
+// Return: 없음.
+//////////////////////////////////////////////////////////////////////////
+void CNPacket::Free()
+{
+	if (0 == InterlockedDecrement64((LONG64 *)&_iRefCnt))
+		delete this;
 }

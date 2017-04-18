@@ -10,7 +10,7 @@
 /////////////////////////////////////////////////////////////////////////
 CAyaStreamSQ::CAyaStreamSQ()
 {
-	Initial(1000);
+	Initial(100000);
 }
 
 CAyaStreamSQ::CAyaStreamSQ(int iBufferSize)
@@ -236,11 +236,6 @@ int	CAyaStreamSQ::MoveWritePos(int iSize)
 /////////////////////////////////////////////////////////////////////////
 void CAyaStreamSQ::ClearBuffer(void)
 {
-	for (int iCnt = 0; iCnt < GetBufferSize(); iCnt++)
-	{
-		m_chpBuffer[iCnt] = 0;
-	}
-
 	m_iWritePos = 0;
 	m_iReadPos = 0;
 }

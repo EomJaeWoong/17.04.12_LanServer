@@ -142,6 +142,8 @@ protected:
 	__int64 _iSessionID;
 
 	bool _bShutdown;
+
+	bool _bNagle;
 };
 
 

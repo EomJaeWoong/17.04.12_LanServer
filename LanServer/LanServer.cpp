@@ -7,6 +7,7 @@
 #pragma comment (lib, "Winmm.lib")
 #pragma comment (lib, "Ws2_32.lib")
 
+#include "Config.h"
 #include "StreamQueue.h"
 #include "NPacket.h"
 #include "LanServer.h"
@@ -29,6 +30,8 @@ bool CLanServer::Start(WCHAR *wOpenIP, int iPort, int iWorkerThdNum, BOOL bNagle
 {
 	int retval;
 	DWORD dwThreadID;
+
+	_bShutdown = false;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// 윈속 초기화
@@ -72,7 +75,7 @@ bool CLanServer::Start(WCHAR *wOpenIP, int iPort, int iWorkerThdNum, BOOL bNagle
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// nagle 옵션
 	//////////////////////////////////////////////////////////////////////////////////////////////////
-
+	_bNagle = bNagle;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Thread 생성
@@ -85,6 +88,8 @@ bool CLanServer::Start(WCHAR *wOpenIP, int iPort, int iWorkerThdNum, BOOL bNagle
 		0,
 		(unsigned int *)&dwThreadID
 		);
+
+	_iWorkerThdNum = iWorkerThdNum;
 
 	for (int iCnt = 0; iCnt < iWorkerThdNum; iCnt++)
 	{
@@ -112,7 +117,22 @@ bool CLanServer::Start(WCHAR *wOpenIP, int iPort, int iWorkerThdNum, BOOL bNagle
 
 void CLanServer::Stop()
 {
+	int retval;
 
+	_bShutdown = true;
+
+	HANDLE *hThread = new HANDLE[1 + _iWorkerThdNum];
+	hThread[0] = hAcceptThread;
+	for (int iCnt = 0; iCnt < _iWorkerThdNum; iCnt++)
+		hThread[iCnt + 1] = hWorkerThread[iCnt];
+
+	retval = WaitForMultipleObjects(1 + _iWorkerThdNum, hThread, TRUE, INFINITE);
+	if (retval != WAIT_OBJECT_0)
+		wprintf(L"Stop Error\n");
+
+	CloseHandle(hIOCP);
+
+	WSACleanup();
 }
 
 int CLanServer::GetClientCount(){ return _iSessionCount; }
@@ -131,6 +151,7 @@ bool CLanServer::SendPacket(__int64 iSessionID, CNPacket *pPacket)
 	{
 		if (Session[iCnt]._iSessionID == iSessionID)
 		{
+			pPacket->addRef();
 			Session[iCnt].SendQ.Put((char *)&pPacket, sizeof(pPacket));
 			break;
 		}
@@ -214,6 +235,8 @@ BOOL CLanServer::SendPost(SESSION *pSession)
 				return FALSE;
 			}
 		}
+
+		pSession->SendQ.RemoveData(sizeof(char *) * iCount);
 	}
 
 	return TRUE;
@@ -284,14 +307,14 @@ int CLanServer::WorkerThread_Update()
 		//////////////////////////////////////////////////////////////////////////////
 		if (pOverlapped == &pSession->_RecvOverlapped)
 		{
-			pPacket = new CNPacket();
+			pPacket = CNPacket::Alloc();
 			pSession->RecvQ.MoveWritePos(dwTransferred);
 			pPacket->Put(pSession->RecvQ.GetReadBufferPtr(), pSession->RecvQ.GetUseSize());
 			pSession->RecvQ.RemoveData(dwTransferred);
 
 			OnRecv(pSession->_iSessionID, pPacket);
 			
-			delete pPacket;
+			pPacket->Free();
 
 			RecvPost(pSession);
 		}
@@ -301,13 +324,9 @@ int CLanServer::WorkerThread_Update()
 		//////////////////////////////////////////////////////////////////////////////
 		else if (pOverlapped == &pSession->_SendOverlapped)
 		{
-			CNPacket *pPacket = NULL;
-
-			pSession->SendQ.RemoveData(8);
 			pSession->_bSendFlag = FALSE;
 
 			OnSend(pSession->_iSessionID, dwTransferred);
-			
 		}
 
 		retval = InterlockedDecrement64((LONG64 *)&pSession->_lIOCount);
@@ -319,6 +338,7 @@ int CLanServer::WorkerThread_Update()
 
 		OnWorkerThreadEnd();
 	}
+
 	return 0;
 }
 
@@ -342,6 +362,9 @@ int CLanServer::AcceptThread_Update()
 		}
 		InetNtop(AF_INET, &clientSock.sin_addr, clientIP, 16);
 
+		if (_iSessionCount >= MAX_SESSION)
+			OnError(dfMAX_SESSION, L"Session is Maximun!");
+
 		if (!OnConnectionRequest(clientIP, ntohs(clientSock.sin_port)))		// accept 직후
 		{
 			DisconnectSession(ClientSocket);
@@ -349,6 +372,7 @@ int CLanServer::AcceptThread_Update()
 		}	
 		InterlockedIncrement64((LONG64 *)&_AcceptCounter);
 		InterlockedIncrement64((LONG64 *)&_AcceptTotalCounter);
+
 		//////////////////////////////////////////////////////////////////////////////
 		// 세션 추가 과정
 		//////////////////////////////////////////////////////////////////////////////
